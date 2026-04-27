@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>URL Shortener</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --border: #2a2a3a;
+      --accent: #7fff6e;
+      --accent2: #6e9fff;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --error: #ff6e6e;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background-image:
+        radial-gradient(ellipse 60% 40% at 20% 20%, rgba(127,255,110,0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 80% 80%, rgba(110,159,255,0.05) 0%, transparent 60%);
+    }
+
+    /* ─── Header ─── */
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 0.3rem 0.8rem;
+      border-radius: 2px;
+      margin-bottom: 1.2rem;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.1s forwards;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.2s forwards;
+    }
+
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.8rem;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.3s forwards;
+    }
+
+    /* ─── Card ─── */
+    .card {
+      width: 100%;
+      max-width: 580px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.4s forwards;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      padding: 0.85rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    button {
+      background: var(--accent);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.85rem 1.4rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    button:hover { opacity: 0.85; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ─── Result ─── */
+    #result {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .result-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem;
+    }
+
+    .result-box.success { border-color: var(--accent); }
+    .result-box.error   { border-color: var(--error); }
+
+    .result-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .result-label.success { color: var(--accent); }
+    .result-label.error   { color: var(--error); }
+
+    .result-value {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      word-break: break-all;
+    }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+
+    .short-link {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      color: var(--accent2);
+      text-decoration: none;
+      flex: 1;
+      word-break: break-all;
+    }
+
+    .short-link:hover { text-decoration: underline; }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.75rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+    }
+
+    .copy-btn:hover { border-color: var(--accent2); color: var(--accent2); opacity: 1; }
+
+    /* ─── History ─── */
+    #history-section {
+      width: 100%;
+      max-width: 580px;
+      margin-top: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.5s forwards;
+    }
+
+    .history-header {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+
+    #history-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .history-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      animation: fadeUp 0.3s forwards;
+    }
+
+    .history-num {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      min-width: 2rem;
+      text-align: right;
+    }
+
+    .history-url {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-short {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent2);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    /* ─── API Docs ─── */
+    .api-docs {
+      width: 100%;
+      max-width: 580px;
+      margin-top: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.6s forwards;
+    }
+
+    .api-header {
+      background: var(--surface);
+      padding: 1rem 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .api-endpoint {
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .api-endpoint:last-child { border-bottom: none; }
+
+    .method {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      min-width: 3.5rem;
+      text-align: center;
+    }
+
+    .method.post { background: rgba(127,255,110,0.15); color: var(--accent); }
+    .method.get  { background: rgba(110,159,255,0.15); color: var(--accent2); }
+
+    .api-path {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      flex: 1;
+    }
+
+    .api-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    /* ─── Animations ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Loading spinner ─── */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">Microservice</div>
+    <h1>URL <span>Shortener</span></h1>
+    <p class="subtitle">// paste a long url. get a short one. done.</p>
+  </header>
+
+  <div class="card">
+    <div class="input-group">
+      <input type="text" id="urlInput" placeholder="https://example.com/very/long/url/goes/here" />
+      <button id="submitBtn" onclick="shortenUrl()">Shorten</button>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <div id="history-section" style="display:none;">
+    <div class="history-header">// recent links</div>
+    <ul id="history-list"></ul>
+  </div>
+
+  <div class="api-docs">
+    <div class="api-header">// api reference</div>
+    <div class="api-endpoint">
+      <div>
+        <span class="method post">POST</span>
+        <div class="api-path">/api/shorturl</div>
+        <div class="api-desc">Body: <code>url=https://example.com</code> — returns <code>{ original_url, short_url }</code></div>
+      </div>
+    </div>
+    <div class="api-endpoint">
+      <div>
+        <span class="method get">GET</span>
+        <div class="api-path">/api/shorturl/:short_url</div>
+        <div class="api-desc">Redirects to the original URL</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const history = [];
+
+    // Enter key support
+    document.getElementById('urlInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') shortenUrl();
+    });
+
+    async function shortenUrl() {
+      const input = document.getElementById('urlInput');
+      const btn   = document.getElementById('submitBtn');
+      const resultDiv = document.getElementById('result');
+      const url = input.value.trim();
+
+      if (!url) return;
+
+      // Loading state
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+
+      try {
+        const res = await fetch('/api/shorturl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `url=${encodeURIComponent(url)}`
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          showError(data.error);
+        } else {
+          showSuccess(data);
+          addToHistory(data);
+          input.value = '';
+        }
+      } catch (err) {
+        showError('Server error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Shorten';
+      }
+    }
+
+    function showError(msg) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = `
+        <div class="result-box error">
+          <div class="result-label error">// error</div>
+          <div class="result-value" style="color: var(--error);">${msg}</div>
+        </div>`;
+    }
+
+    function showSuccess(data) {
+      const resultDiv = document.getElementById('result');
+      const shortUrl  = `${window.location.origin}/api/shorturl/${data.short_url}`;
+
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = `
+        <div class="result-box success">
+          <div class="result-label success">// shortened!</div>
+          <div class="result-value" style="color: var(--muted); font-size:0.8rem;">${data.original_url}</div>
+          <div class="result-row">
+            <a class="short-link" href="${shortUrl}" target="_blank">${shortUrl}</a>
+            <button class="copy-btn" onclick="copyToClipboard('${shortUrl}', this)">Copy</button>
+          </div>
+        </div>`;
+    }
+
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+
+    function addToHistory(data) {
+      const shortUrl = `${window.location.origin}/api/shorturl/${data.short_url}`;
+
+      // Jangan duplikat
+      if (history.find(h => h.short_url === data.short_url)) return;
+      history.unshift(data);
+      if (history.length > 5) history.pop();
+
+      const section = document.getElementById('history-section');
+      const list    = document.getElementById('history-list');
+      section.style.display = 'block';
+
+      list.innerHTML = history.map(item => {
+        const su = `${window.location.origin}/api/shorturl/${item.short_url}`;
+        return `
+          <li class="history-item">
+            <span class="history-num">#${item.short_url}</span>
+            <span class="history-url" title="${item.original_url}">${item.original_url}</span>
+            <a class="history-short" href="${su}" target="_blank">/api/shorturl/${item.short_url}</a>
+          </li>`;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
